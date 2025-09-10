@@ -1,0 +1,53 @@
+# ---- Python basics ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# ---- Virtual environment ----
+.venv/
+venv/
+env/
+ENV/
+*.env.bak
+*.env.local
+
+# ---- Project specific ----
+test.ipynb
+yc_w25_b2b_companies_table.md
+data/
+
+# Sensitive config
+.env
+
+# Logs
+*.log
+logs/
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Testing & coverage ----
+.coverage
+.tox/
+pytest_cache/
+.pytest_cache/
+htmlcov/
+.cache/
+
+# ChromeDriver
+chrome-mac-arm64/
+chrome-mac-x64/

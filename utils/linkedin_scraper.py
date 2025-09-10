@@ -53,23 +53,23 @@ def read_all_pages(company_list, driver, company_name=""):
     return company_list
 
 def scraper(
-        companies: list,
+        companies: list[str],
         email_address: str = os.environ['EMAIL'],
-        password: str = os.environ['PASSWORD']
-) -> pd.DataFrame:
+        pw: str = os.environ['PASSWORD']
+) -> list[str]:
 
     # Go to login page:
     driver = webdriver.Chrome()
     driver.get('https://www.linkedin.com/login')
 
-    if not email_address or not password:
+    if not email_address or not pw:
         raise ValueError("Email address and password must be provided.")
 
     # Log in to LinkedIn:
     email = driver.find_element(By.ID, "username")
     email.send_keys(email_address)
     password = driver.find_element(By.ID, "password")
-    password.send_keys(password)
+    password.send_keys(pw)
     password.submit()
 
     company_list = []
@@ -78,6 +78,7 @@ def scraper(
         try:
             company_list = read_all_pages(company_list, driver, c)
         except Exception:
+            driver.quit()
             return company_list
-
+    driver.quit()
     return company_list

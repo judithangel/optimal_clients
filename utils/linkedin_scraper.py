@@ -6,13 +6,14 @@ from selenium.webdriver.common.by import By
 import urllib.parse
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
 from time import sleep
 from dotenv import load_dotenv
 load_dotenv()
 
 def read_company_names(company_list, driver):
     company = driver.find_elements(
-    By.XPATH, "//div[contains(@class,'artdeco-entity-lockup__subtitle')]//span[normalize-space()]")
+        By.XPATH, "//div[contains(@class,'artdeco-entity-lockup__subtitle')]//span[normalize-space()]")
     for c in company:
         if c.text:
             company_list.append(c.text)
@@ -20,16 +21,14 @@ def read_company_names(company_list, driver):
 
 def read_all_pages(company_list, driver, company_name=""):
 
-    # Go on search page on LinkedIn
+    # Enter search term into search field
     search_term = f"service technician {company_name}"
-    url = f"https://www.linkedin.com/search/results/all/?keywords={urllib.parse.quote(search_term)}&origin=TYPEAHEAD_HISTORY"
-    driver.get(url)
-    # Wait until clickable
-    wait = WebDriverWait(driver, 10)
-    link = wait.until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, "div.search-results__cluster-bottom-banner a"))
+    search_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, '//input[@data-testid="typeahead-input"]'))
     )
-    link.click()
+    search_input.send_keys(search_term)
+    search_input.send_keys(Keys.ENTER)
+
     for i in range(100):
 
         company_list = read_company_names(company_list, driver)
@@ -47,8 +46,8 @@ def read_all_pages(company_list, driver, company_name=""):
             )
             next_button.click()
             sleep(1)
-        except Exception as e:
-            print(f"Exiting for loop: {e}")
+        except Exception:
+            print(f"Exiting for loop")
             break
     return company_list
 
@@ -76,9 +75,13 @@ def scraper(
 
     for c in companies:
         try:
+            sleep(0.5)
+            url = f"https://www.linkedin.com/jobs/"
+            driver.get(url)
+            sleep(0.25)
             company_list = read_all_pages(company_list, driver, c)
-        except Exception:
-            driver.quit()
-            return company_list
+        except Exception as e:
+            print(f"Error with company {c}: {e}")
+
     driver.quit()
     return company_list

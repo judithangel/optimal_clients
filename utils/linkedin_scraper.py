@@ -80,8 +80,8 @@ def scraper(
             driver.get(url)
             sleep(0.25)
             company_list = read_all_pages(company_list, driver, c)
-        except Exception as e:
-            print(f"Error with company {c}: {e}")
+        except Exception:
+            print(f"Error with company {c}")
 
     driver.quit()
     return company_list

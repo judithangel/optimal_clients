@@ -50,7 +50,7 @@ def clean_company_names(df: pd.DataFrame) -> pd.DataFrame:
     df.reset_index(drop=True, inplace=True)
     df["lowercase_company"] = df["company"].str.lower()
     df["lowercase_company"] = df["lowercase_company"].str.replace(
-        r'\s(g?mbh|gmbh \& co kg|gmbh \&?\+? co. kg|se \&?\+? co. kg|ag|kg|ug|e.k.|e.v.|ohg|gbr|partg|partg mbb|kgaa|se|sce|ggmbh|gug|gag|gkg|eg|kgaa|gbr|llc|ltd.|ltd|inc.|inc|corp.|corp|plc|co. ltd.|co. kg|co kg|co.)*$', '', regex=True)
+        r'\s(g?mbh|gmbh \&?\+? co kg|gmbh \&?\+? co. kg|se \&?\+? co. kg|ag|kg|ug|e.k.|e.v.|ohg|gbr|partg|partg mbb|kgaa|se|sce|ggmbh|gug|gag|gkg|eg|kgaa|gbr|llc|ltd.|ltd|inc.|inc|corp.|corp|plc|co. ltd.|co. kg|co kg|co.)*$', '', regex=True)
     df["lowercase_company"] = df["lowercase_company"].str.replace(r'\&|\+\s?$', '', regex=True)
     df["lowercase_company"] = df["lowercase_company"].str.replace("˚", "grad")
 
@@ -62,18 +62,27 @@ def join_entries_for_same_companies(df: pd.DataFrame) -> pd.DataFrame:
     If two consecutive entries have a Levenshtein distance of less than 2, they are considered the same company.
     The values of numerical columns are summed for these entries.
     """
+    # Sort by lowercase company name
+    df.sort_values(by='lowercase_company', inplace=True)
+    df.reset_index(drop=True, inplace=True)
     # Measure distance between company names:
     df["lowercase_company_shifted"] = df["lowercase_company"].shift(-1)
     df["company_name_distance"] = df.apply(
         lambda x: lev.distance(x["lowercase_company"], x["lowercase_company_shifted"]) if x["lowercase_company_shifted"] is not None else None,
         axis=1)
-    # Find indices where distance is less than 2 and replace company name with the next one:
-    filter = df["company_name_distance"] < 2
-    indices = df.loc[filter, "company"].index
-    df.loc[indices, "company"] = df.loc[indices + 1, "company"]
-    df.loc[indices, "lowercase_company"] = df.loc[indices + 1, "lowercase_company"]
+    # Find indices where distance is less than 2 and replace following company name with representative:
+    prev_same = False
+    for i in df.index:
+        if df["company_name_distance"].iloc[i] < 2:
+            if prev_same == False:
+                group_name = df["lowercase_company"].iloc[i]
+                df.loc[i+1, "lowercase_company"] = group_name
+            else:
+                df.loc[i+1, "lowercase_company"] = group_name
+            prev_same = True
+        else:
+            prev_same = False
     df.drop(columns=["lowercase_company_shifted", "company_name_distance"], inplace=True)
-    # Add corresponding number of job ads:
-    df = df.groupby("company").sum().reset_index()
+    df = df.groupby("lowercase_company")["count"].sum().reset_index()
 
     return df

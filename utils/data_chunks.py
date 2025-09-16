@@ -16,7 +16,7 @@ def scrape_chunks(companies_df: pd.DataFrame, scraper: Callable, path: str, chun
     companies = df['Account Name'].sort_values().tolist()
     company_chunks = [companies[i:i + chunk_size] for i in range(0, len(companies), chunk_size)]
 
-    for i in range(8, len(company_chunks)):  # TODO: Change back to 0
+    for i in range(len(company_chunks)):
         company_list = scraper(company_chunks[i])
 
         df_companies = pd.DataFrame(company_list, columns=['company'])
@@ -29,4 +29,4 @@ def scrape_chunks(companies_df: pd.DataFrame, scraper: Callable, path: str, chun
             df_concatenated.to_excel(path, index=False)
         except FileNotFoundError:
             df_counts.to_excel(path, index=False)
-        print(f"Chunk {i}/{len(company_chunks)} processed and saved.")
+        print(f"Chunk {i+1}/{len(company_chunks)} processed and saved.")

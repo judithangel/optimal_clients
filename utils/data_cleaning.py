@@ -86,3 +86,33 @@ def join_entries_for_same_companies(df: pd.DataFrame) -> pd.DataFrame:
     df = df.groupby("lowercase_company")["count"].sum().reset_index()
 
     return df
+
+def remove_outliers(df: pd.DataFrame, current_customers: pd.DataFrame) -> pd.DataFrame:
+    """
+    Removes outliers from the DataFrame based on current customers.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame.
+
+    Returns:
+    pd.DataFrame: The DataFrame with outliers removed.
+    """
+    R_Q1 = current_customers["Annual Revenue (USD)"].quantile(0.25)
+    R_Q3 = current_customers["Annual Revenue (USD)"].quantile(0.75)
+    R_min = current_customers["Annual Revenue (USD)"].min()
+    R_max = current_customers["Annual Revenue (USD)"].max()
+    R_IQR = R_Q3 - R_Q1
+    # Use minimum and maximum for lower/upper bounds as the number of current customers is small
+    R_lower_bound = R_min - 1.5 * R_IQR
+    R_upper_bound = R_max + 1.5 * R_IQR
+    filter_rev = (df["Annual Revenue (USD)"] >= R_lower_bound) & (df["Annual Revenue (USD)"] <= R_upper_bound)
+    E_Q1 = current_customers["Employees"].quantile(0.25)
+    E_Q3 = current_customers["Employees"].quantile(0.75)  # Compute bounds based on current customers
+    E_max = current_customers["Employees"].max()
+    E_IQR = E_Q3 - E_Q1
+    # Lower bound for Employees is set to 10 to exclude very small companies
+    E_lower_bound = 10
+    E_upper_bound = E_max + 1.5 * E_IQR
+    filter_emp = (df["Employees"] >= E_lower_bound) & (df["Employees"] <= E_upper_bound)
+    df_non_outliers = df[filter_rev & filter_emp]
+    return df_non_outliers

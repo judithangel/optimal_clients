@@ -12,15 +12,14 @@ def scrape_chunks(companies_df: pd.DataFrame, scraper: Callable, path: str, chun
         scraper_function (callable): The scraping function to use.
 
     """
-    df = clean_data(companies_df)
-    companies = df['Account Name'].sort_values().tolist()
+    companies = companies_df['Company'].sort_values().tolist()
     company_chunks = [companies[i:i + chunk_size] for i in range(0, len(companies), chunk_size)]
 
     for i in range(len(company_chunks)):
         company_list = scraper(company_chunks[i])
 
-        df_companies = pd.DataFrame(company_list, columns=['company'])
-        df_counts = df_companies["company"].value_counts().sort_index().reset_index()
+        df_companies = pd.DataFrame(company_list, columns=['Company'])
+        df_counts = df_companies["Company"].value_counts().sort_index().reset_index()
 
         # Save scraped data to Excel
         try:

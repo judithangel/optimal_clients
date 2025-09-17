@@ -44,11 +44,11 @@ def clean_company_names(df: pd.DataFrame) -> pd.DataFrame:
     The new column 'lowercase_company' is created, which contains the cleaned and lowercased company names without suffixes.
     """
     df.drop_duplicates(inplace=True)
-    df["company"] = df["company"].str.strip()
-    df["company"] = df["company"].str.replace('Jetzt bewerben Drucken', '')
-    df.sort_values(by='company', inplace=True)
+    df["Company"] = df["Company"].str.strip()
+    df["Company"] = df["Company"].str.replace('Jetzt bewerben Drucken', '')
+    df.sort_values(by='Company', inplace=True)
     df.reset_index(drop=True, inplace=True)
-    df["lowercase_company"] = df["company"].str.lower()
+    df["lowercase_company"] = df["Company"].str.lower()
     df["lowercase_company"] = df["lowercase_company"].str.replace(
         r'\s(g?mbh|gmbh \&?\+? co kg|gmbh \&?\+? co. kg|se \&?\+? co. kg|ag|kg|ug|e.k.|e.v.|ohg|gbr|partg|partg mbb|kgaa|se|sce|ggmbh|gug|gag|gkg|eg|kgaa|gbr|llc|ltd.|ltd|inc.|inc|corp.|corp|plc|co. ltd.|co. kg|co kg|co.)*$', '', regex=True)
     df["lowercase_company"] = df["lowercase_company"].str.replace(r'\&|\+\s?$', '', regex=True)
@@ -116,3 +116,25 @@ def remove_outliers(df: pd.DataFrame, current_customers: pd.DataFrame) -> pd.Dat
     filter_emp = (df["Employees"] >= E_lower_bound) & (df["Employees"] <= E_upper_bound)
     df_non_outliers = df[filter_rev & filter_emp]
     return df_non_outliers
+
+def preprocess_scraped_data(df: pd.DataFrame, current_customers: pd.DataFrame) -> pd.DataFrame:
+
+    df = clean_company_names(df)
+    df = join_entries_for_same_companies(df)
+    return df
+
+def preprocess_company_list(df: pd.DataFrame, current_customers: pd.DataFrame) -> pd.DataFrame:
+
+    df = clean_data(df)
+    df.rename(columns={"Account Name": "Company"}, inplace=True)
+    df = clean_company_names(df)
+    df["Annual Revenue (USD)"] = df["Annual Revenue"].copy()
+    df["Annual Revenue (USD)"] = df.apply(_to_usd, axis=1)
+    df = remove_outliers(df, current_customers)
+    return df
+
+def _to_usd(row):
+    if row["Annual Revenue Currency"] == "EUR":
+        return int(row["Annual Revenue"] * 1.18)  # Approx. conversion rate
+    else:
+        return row["Annual Revenue"]

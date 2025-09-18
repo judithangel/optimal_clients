@@ -107,7 +107,7 @@ with tab3:
     n_clusters = st.selectbox("Select number of clusters", options=[2, 3, 4, 5, 6], index=3)
     X = df_company_data[["Annual Revenue (USD)", "Employees"]]
     df_clustered, kmeans, scaler = kmeans_clustering(X, n_clusters=n_clusters)
-    # Plot companies with clusters and show current customers as black crosses
+    # Plot companies with clusters and show current customers as dark crosses
     fig = plot_clusters_2d(df_clustered, kmeans, scaler, current_customers)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -124,7 +124,7 @@ with tab3:
 
 with tab4:
 
-    st.write("Visualisation of the company data.")
+    st.write("Visualisation of the data for our customers and companies which have job advertisements for service technicians or similar positions.")
     df_joined = pd.concat([
         company_data_selection[["Company", "Annual Revenue (USD)", "Employees", "Industry"]],
         current_customers[["Company", "Annual Revenue (USD)", "Employees", "Industry"]]
@@ -133,3 +133,5 @@ with tab4:
 
     fig = px.histogram(df_joined, x="Industry", color="Current customer", title="Industry Distribution").update_xaxes(categoryorder="total descending")
     st.plotly_chart(fig, use_container_width=True)
+    st.write("The information on the industry is not included in the clustering as there are too many different industries compared to the number "
+             + " of companies. However, it is still interesting to see the distribution of industries among our current customers and the potential customers.")

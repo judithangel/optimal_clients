@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import plotly.express as px
 from utils.data_chunks import scrape_chunks
 from utils.xing_scraper import scraper
 from utils.data_cleaning import clean_data, preprocess_company_list, preprocess_scraped_data
@@ -74,11 +75,17 @@ with tab1:
         df_xing = preprocess_scraped_data(df_xing_orig, current_customers)
     except FileNotFoundError:
         st.stop()
+    # Find intersection between company data and Xing data
     intersection = list(set(df_company_data["lowercase_company"].tolist()).intersection(set(df_xing["lowercase_company"].unique().tolist())))
     df_company_data["Service technician ads"] = 0
     for c in intersection:
         df_company_data.loc[df_company_data["lowercase_company"] == c, "Service technician ads"] = df_xing.loc[df_xing["lowercase_company"] == c, "count"].values[0]
     company_data_selection = df_company_data[df_company_data["Service technician ads"] > 0]
+    # Remove companies that are already our customers:
+    intersection_current_customers = list(set(company_data_selection["Company"].tolist()).intersection(set(current_customers["Company"].unique().tolist())))
+    for c in intersection_current_customers:
+        company_data_selection.drop(company_data_selection[company_data_selection["Company"] == c].index, inplace=True)
+    # Compute number of job ads per 100 employees:
     company_data_selection["Ads per 100 employees"] = company_data_selection["Service technician ads"] / company_data_selection["Employees"] * 100
     company_data_selection = company_data_selection.sort_values(by="Ads per 100 employees", ascending=False).reset_index(drop=True)
     st.write(f"Number of companies with service technician ads: {len(company_data_selection)} \n\n You can view these companies in the 'View company data' tab.")
@@ -89,14 +96,31 @@ with tab2:
     st.write("These are the companies out of the excel list that have job advertisements for service technicians or similar positions on Xing.")
     st.dataframe(company_data_selection[["Company", "Annual Revenue (USD)", "Employees", "Industry", "Service technician ads", "Ads per 100 employees"]])
     if st.button("Show additional companies"):
-        st.subheader("Additional companies from scraped data")
-        st.write("These are the companies that have job advertisements for service technicians or similar positions on Xing but are not included in the excel file of companies.")
-        st.dataframe(df_rest[["Company", "count"]].sort_values(by="count", ascending=False).reset_index(drop=True))
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Additional companies from scraped data")
+            st.write("These are the companies that have job advertisements for service technicians or similar positions on Xing but are not included in the excel file of companies.")
+            st.dataframe(df_rest[["Company", "count"]].sort_values(by="count", ascending=False).reset_index(drop=True))
 
 with tab3:
-    n_clusters = st.selectbox("Select number of clusters", options=[2, 3, 4, 5], index=1)
-    if st.button("Perform clustering"):
-        st.write("Clustering will be performed on the existing data.")
+    st.subheader("Clustering of companies based on Annual Revenue and Employees")
+    n_clusters = st.selectbox("Select number of clusters", options=[2, 3, 4, 5, 6], index=3)
+    X = df_company_data[["Annual Revenue (USD)", "Employees"]]
+    df_clustered, kmeans, scaler = kmeans_clustering(X, n_clusters=n_clusters)
+    # Plot companies with clusters and show current customers as black crosses
+    fig = plot_clusters_2d(df_clustered, kmeans, scaler, current_customers)
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Prediction of clusters for current customers
+    y_pred = kmeans.predict(scaler.transform(current_customers[["Annual Revenue (USD)", "Employees"]]))
+    current_customers["Cluster"] = y_pred
+    cluster_counts = current_customers["Cluster"].value_counts().reset_index()
+    index = current_customers["Cluster"].value_counts().argmax()
+    st.write(f"Most of our current customers are in cluster {cluster_counts.loc[index, 'Cluster']}, which contains {cluster_counts.loc[index, 'count']} of our current customers.")
+    # st.metric(
+    #     label="Most of our customers are in cluster",
+    #     value=cluster_counts.loc[index, "Cluster"]
+    # )
 
 with tab4:
 
@@ -107,5 +131,5 @@ with tab4:
         ], ignore_index=True)
     df_joined["Current customer"] = ["No"] * len(company_data_selection) + ["Yes"] * len(current_customers)
 
-    # Restliche Firmen vom Scraping:
-    df_rest = df_xing[~df_xing["lowercase_company"].isin(intersection)]
+    fig = px.histogram(df_joined, x="Industry", color="Current customer", title="Industry Distribution").update_xaxes(categoryorder="total descending")
+    st.plotly_chart(fig, use_container_width=True)

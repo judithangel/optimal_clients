@@ -153,7 +153,7 @@ def plot_clusters_2d(df, kmeans, scaler, current_customers):
         x=current_customers["Annual Revenue (USD)"],
         y=current_customers["Employees"],
         mode='markers',
-        marker=dict(color="#545353", size=10, symbol='x'),
+        marker=dict(color="#6C6B6B", size=10, symbol='x'),
         name='Current customers'
     ))
 

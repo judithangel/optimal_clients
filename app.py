@@ -150,6 +150,12 @@ with tab3:
         cluster_counts = current_customers["Cluster"].value_counts().reset_index()
         index = current_customers["Cluster"].value_counts().argmax()
         st.write(f"Most of our current customers are in cluster {cluster_counts.loc[index, 'Cluster']}, which contains {cluster_counts.loc[index, 'count']} of our current customers.")
+        if st.button("Show silhouette score"):
+            from sklearn.metrics import silhouette_score
+            silhouette_avg = silhouette_score(X, df_clustered["Cluster labels"])
+            st.metric("Silhouette Score", f"{silhouette_avg:.2f}")
+            st.write(f"A higher silhouette score indicates better-defined clusters, where the "
+                     " maximum value is 1 and worst value is -1.")
     else:
         st.warning("Some data is still missing.")
 

@@ -3,6 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import numpy as np
 
 def kmeans_clustering(data: pd.DataFrame, n_clusters: int) -> pd.DataFrame:
@@ -163,4 +164,49 @@ def plot_clusters_2d(df, kmeans, scaler, current_customers):
         yaxis_title="Employees"
     )
     return fig
-    
+
+
+def violin_plots(df_non_outliers: pd.DataFrame):
+
+    # Subplot-Layout: 1 Reihe, 2 Spalten
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("Annual Revenue by Cluster", "Employees by Cluster")
+    )
+
+    # Annual Revenue
+    fig.add_trace(
+        go.Violin(
+            x=df_non_outliers["Cluster labels"],
+            y=df_non_outliers["Annual Revenue (USD)"],
+            box_visible=True,
+            meanline_visible=True,
+            points="all",
+            marker=dict(size=2),
+            name="Annual Revenue"
+        ),
+        row=1, col=1
+    )
+
+    # Employees
+    fig.add_trace(
+        go.Violin(
+            x=df_non_outliers["Cluster labels"],
+            y=df_non_outliers["Employees"],
+            box_visible=True,
+            meanline_visible=True,
+            points="all",
+            marker=dict(size=2),
+            name="Employees"
+        ),
+        row=1, col=2
+    )
+
+    # Layout-Anpassungen
+    fig.update_layout(
+        height=500, width=1200,
+        showlegend=False,
+        title_text="Distribution of Features by Cluster"
+    )
+
+    return fig

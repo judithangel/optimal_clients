@@ -7,7 +7,7 @@ from matplotlib_venn import venn2
 from utils.data_chunks import scrape_chunks
 from utils.xing_scraper import scraper
 from utils.data_cleaning import clean_data, preprocess_company_list, preprocess_scraped_data
-from utils.ml_functions import kmeans_clustering, plot_clusters_3d, plot_clusters_2d
+from utils.ml_functions import kmeans_clustering, plot_clusters_2d, violin_plots
 
 st.set_page_config(
     page_title="find(IQ) potential customers",
@@ -99,6 +99,7 @@ with tab1:
         else:
             company_data_selection = company_data_selection_orig.copy()
         # Compute number of job ads per 100 employees:
+        df_company_data["Ads per 100 employees"] = df_company_data["Service technician ads"] / df_company_data["Employees"] * 100
         company_data_selection["Ads per 100 employees"] = company_data_selection["Service technician ads"] / company_data_selection["Employees"] * 100
         company_data_selection = company_data_selection.sort_values(by="Ads per 100 employees", ascending=False).reset_index(drop=True)
         st.write(f"Number of companies with service technician ads: {len(company_data_selection)} \n\n You can view these companies in the 'View company data' tab.")
@@ -140,6 +141,13 @@ with tab3:
             n_clusters = st.selectbox("Select number of clusters", options=[2, 3, 4, 5, 6], index=3)
         X = df_company_data[["Annual Revenue (USD)", "Employees"]]
         df_clustered, kmeans, scaler = kmeans_clustering(X, n_clusters=n_clusters)
+        df_company_data["Cluster labels"] = df_clustered["Cluster labels"]
+        if st.button("Show silhouette score"):
+            from sklearn.metrics import silhouette_score
+            silhouette_avg = silhouette_score(X, df_clustered["Cluster labels"])
+            st.metric("Silhouette Score", f"{silhouette_avg:.2f}")
+            st.write(f"A higher silhouette score indicates better-defined clusters, where the "
+                    " maximum value is 1 and worst value is -1.")
         # Plot companies with clusters and show current customers as dark crosses
         fig = plot_clusters_2d(df_clustered, kmeans, scaler, current_customers)
         st.plotly_chart(fig, use_container_width=True)
@@ -149,13 +157,15 @@ with tab3:
         current_customers["Cluster"] = y_pred
         cluster_counts = current_customers["Cluster"].value_counts().reset_index()
         index = current_customers["Cluster"].value_counts().argmax()
-        st.write(f"Most of our current customers are in cluster {cluster_counts.loc[index, 'Cluster']}, which contains {cluster_counts.loc[index, 'count']} of our current customers.")
-        if st.button("Show silhouette score"):
-            from sklearn.metrics import silhouette_score
-            silhouette_avg = silhouette_score(X, df_clustered["Cluster labels"])
-            st.metric("Silhouette Score", f"{silhouette_avg:.2f}")
-            st.write(f"A higher silhouette score indicates better-defined clusters, where the "
-                     " maximum value is 1 and worst value is -1.")
+        st.write(f"Most of our customers are in cluster {cluster_counts.loc[index, 'Cluster']}, which contains {cluster_counts.loc[index, 'count']} of our current customers.")
+        fig = violin_plots(df_clustered)
+        st.plotly_chart(fig, use_container_width=True)
+        st.write("The violin plots above show that most of our customers have a relatively low annual revenue and small number of employees.")
+        st.write("Please choose a cluster number to display the top ten companies out of this cluster with the highest number of job advertisements.")
+        cluster_number = st.selectbox("Select cluster number", options=list(range(n_clusters)))
+        top_companies = df_company_data[df_company_data["Cluster labels"] == cluster_number].sort_values(by="Ads per 100 employees", ascending=False).head(10)
+        st.write(f"Top 10 companies in cluster {cluster_number}:")
+        st.dataframe(top_companies[["Company", "Annual Revenue (USD)", "Employees", "Industry", "Service technician ads", "Ads per 100 employees"]])
     else:
         st.warning("Some data is still missing.")
 
@@ -172,5 +182,10 @@ with tab4:
         st.plotly_chart(fig, use_container_width=True)
         st.write("The information on the industry is not included in the clustering as there are too many different industries compared to the number "
                 + " of companies. However, it is still interesting to see the distribution of industries among our current customers and the potential customers.")
+        fig = px.bar(x=company_data_selection.sort_values(by="Service technician ads", ascending=False)["Company"].head(10),
+                     y=company_data_selection.sort_values(by="Service technician ads", ascending=False)["Service technician ads"].head(10),
+                     title="Top 10 companies with most service technician ads")
+        fig.update_layout(xaxis_title="Company", yaxis_title="Number of service technician ads")
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("Some data is still missing.")

@@ -23,6 +23,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["Update company data", "View company data", "C
 
 with tab1:
     # Current customers
+    st.subheader("findIQ customers")
     st.write("Data for the current customers is saved in an Excel file. You can update this data by uploading a new file.")
     current_customers = pd.read_excel('data/customers/Active_Accounts_with_revenue.xlsx')
     if st.button("Update current customers"):
@@ -36,7 +37,8 @@ with tab1:
             st.write("Please upload an Excel file to proceed.")
 
     # List of companies to scrape
-    st.write("You can either upload a new list of companies or use an existing one.")
+    st.subheader("List of potential new customers")
+    st.write("For the list of potential new customers, you can either upload a new list of companies or use an existing one.")
     use_existing_file = st.selectbox(
         "Please choose an option",
         options=["Use existing list of companies", "Upload new list of companies"])
@@ -74,6 +76,7 @@ with tab1:
     df_company_data = preprocess_company_list(df_company_data, current_customers)
 
     # Scraping
+    st.subheader("Scrape service technician ads from Xing")
     if st.button("Scrape data from Xing", help=f"Estimated time to scrape: {len(df_company_data)/100*3.2:.0f} minutes."):
         st.write("Company data will be scraped and saved.")
         scrape_chunks(df_company_data, scraper, path_scraped, 100)
@@ -102,7 +105,7 @@ with tab1:
         df_company_data["Ads per 100 employees"] = df_company_data["Service technician ads"] / df_company_data["Employees"] * 100
         company_data_selection["Ads per 100 employees"] = company_data_selection["Service technician ads"] / company_data_selection["Employees"] * 100
         company_data_selection = company_data_selection.sort_values(by="Ads per 100 employees", ascending=False).reset_index(drop=True)
-        st.write(f"Number of companies with service technician ads: {len(company_data_selection)} \n\n You can view these companies in the 'View company data' tab.")
+        st.write(f"Number of companies with service technician ads: {len(company_data_selection)} \n\n You can view details on these companies in the 'View company data' tab.")
         df_rest = df_xing_orig[~df_xing_orig["lowercase_company"].isin(intersection)]
 
 with tab2:
@@ -110,9 +113,9 @@ with tab2:
         cols = st.columns(3)
         with cols[0]:
             st.markdown("""In the Venn diagram on the right you can see
-    - the number of companies in the excel list (red)
-    - the number of companies found on Xing with service technician ads (green)
-    - the intersection of both (brown)""")
+- the number of companies in the excel list (red)
+- the number of companies found on Xing with service technician ads (green)
+- the intersection of both (brown)""")
         with cols[1]:
             venn_fig = plt.figure(figsize=(4,4))
             venn = venn2(
@@ -176,6 +179,7 @@ with tab3:
         st.warning("Some data is still missing.")
 
 with tab4:
+    st.subheader("Visualisation of additional information")
     if st.session_state["continue"]:
         st.write("Visualisation of the data for our customers and companies which have job advertisements for service technicians or similar positions.")
         df_joined = pd.concat([

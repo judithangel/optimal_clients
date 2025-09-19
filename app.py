@@ -161,11 +161,17 @@ with tab3:
         fig = violin_plots(df_clustered)
         st.plotly_chart(fig, use_container_width=True)
         st.write("The violin plots above show that most of our customers have a relatively low annual revenue and small number of employees.")
+        # Top ten companies in chosen cluster:
         st.write("Please choose a cluster number to display the top ten companies out of this cluster with the highest number of job advertisements.")
         cluster_number = st.selectbox("Select cluster number", options=list(range(n_clusters)))
-        top_companies = df_company_data[df_company_data["Cluster labels"] == cluster_number].sort_values(by="Ads per 100 employees", ascending=False).head(10)
+        top_companies = df_company_data[df_company_data["Cluster labels"] == cluster_number].sort_values(by="Ads per 100 employees", ascending=False)
+        # Remove companies that are already our customers:
+        intersection_current_customers = list(set(top_companies["Company"].tolist()).intersection(set(current_customers["Company"].unique().tolist())))
+        if len(intersection_current_customers) > 0:
+            for c in intersection_current_customers:
+                top_companies = top_companies.drop(top_companies[top_companies["Company"] == c].index)
         st.write(f"Top 10 companies in cluster {cluster_number}:")
-        st.dataframe(top_companies[["Company", "Annual Revenue (USD)", "Employees", "Industry", "Service technician ads", "Ads per 100 employees"]])
+        st.dataframe(top_companies[["Company", "Annual Revenue (USD)", "Employees", "Industry", "Service technician ads", "Ads per 100 employees"]].head(10))
     else:
         st.warning("Some data is still missing.")
 
